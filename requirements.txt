@@ -1,0 +1,7 @@
+streamlit
+langchain>=0.2.0
+langchain-core
+langchain-groq
+feedparser
+python-dotenv
+joblib

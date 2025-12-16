@@ -1,0 +1,19 @@
+body {
+    background-color: white;
+    color: black;
+}
+
+h1, h2, h3 {
+    color: orangered;
+}
+
+.sidebar {
+    background-color: orange;
+}
+
+.stButton > button {
+    background-color: orangered;
+    color: white;
+    border-radius: 8px;
+    font-weight: bold;
+}
