@@ -1,19 +1,17 @@
 import os
-import joblib
 from dotenv import load_dotenv
-from langchain_groq import ChatGroq
-from langchain_core.prompts import PromptTemplate
-from news_service import fetch_news
 
-# Load env variables
+# ✅ LOAD ENV FIRST
 load_dotenv()
 
-# Safety check
-if not os.getenv("GROQ_API_KEY"):
-    raise ValueError("❌ GROQ_API_KEY not found. Check .env file.")
+from langchain_groq import ChatGroq
+from langchain_core.prompts import PromptTemplate
+from config import config
+from news_service import fetch_news
 
-# Load saved config
-config = joblib.load("news_llm_config.joblib")
+# ✅ DEBUG CHECK (OPTIONAL – REMOVE LATER)
+if not os.getenv("GROQ_API_KEY"):
+    raise ValueError("GROQ_API_KEY not found. Check your .env file.")
 
 # Initialize Groq LLM
 llm = ChatGroq(
@@ -22,50 +20,37 @@ llm = ChatGroq(
     groq_api_key=os.getenv("GROQ_API_KEY")
 )
 
-# Prompt
 prompt = PromptTemplate(
-    template=config["prompt_template"],
-    input_variables=["query", "news", "tone", "length"]
-)
+    template="""
+You are a senior financial news analyst.
 
-chain = prompt | llm
-
-
-# 🔍 VALIDATION FUNCTION (ADD THIS BELOW CHAIN)
-def validate_summary(query, summary):
-    validation_prompt = f"""
-You are a fact-checking AI.
-
-User Query:
+Query:
 {query}
 
-Generated Summary:
-{summary}
+News Articles:
+{news}
 
-Check:
-1. Relevance (High/Medium/Low)
-2. Hallucination risk (Yes/No)
-3. Missing important facts (Yes/No)
+Tasks:
+1. Executive summary
+2. Key trends
+3. Risks & opportunities
+""",
+    input_variables=["query", "news"]
+)
 
-Give a short validation report.
-"""
-    response = llm.invoke(validation_prompt)
+def generate_summary(query: str) -> str:
+    news = fetch_news(query)
+    response = llm.invoke(prompt.format(query=query, news=news))
     return response.content
 
+def sentiment_confidence(summary: str) -> str:
+    response = llm.invoke(
+        f"""
+Analyze sentiment (Positive/Neutral/Negative)
+and confidence score (0–100%).
 
-# 🧠 MAIN FUNCTION (REPLACE OLD ONE)
-def generate_summary(query, tone, length):
-    news_text = fetch_news(query)
-
-    response = chain.invoke({
-        "query": query,
-        "news": news_text,
-        "tone": tone,
-        "length": length
-    })
-
-    summary = response.content
-    validation = validate_summary(query, summary)
-
-    # ⬅️ RETURN BOTH
-    return summary, validation
+Summary:
+{summary}
+"""
+    )
+    return response.content
